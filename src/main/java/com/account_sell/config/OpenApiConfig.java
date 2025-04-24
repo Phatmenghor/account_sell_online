@@ -25,9 +25,9 @@ public class OpenApiConfig {
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Mail Sender API")
+                        .title("Account Sell API")
                         .version("1.0")
-                        .description("Mail Sender API Documentation"))
+                        .description("Account sell API Documentation"))
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 

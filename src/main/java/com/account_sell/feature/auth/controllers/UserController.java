@@ -19,7 +19,7 @@ import javax.validation.Valid;
  * Controller for user management operations.
  */
 @RestController
-@RequestMapping("/api/v1/user")
+@RequestMapping("/api/v1/admin/user")
 @RequiredArgsConstructor
 @CrossOrigin
 @Slf4j

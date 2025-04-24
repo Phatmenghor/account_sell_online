@@ -16,7 +16,7 @@ import javax.validation.Valid;
 import java.util.*;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/admin/auth")
 @RequiredArgsConstructor
 @Slf4j
 public class AuthController {
