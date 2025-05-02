@@ -3,104 +3,90 @@ package com.account_sell.exceptions.error;
 import com.account_sell.exceptions.response.ErrorObject;
 import com.account_sell.exceptions.response.ErrorRequestObject;
 import com.account_sell.exceptions.response.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
+import javax.validation.ConstraintViolationException;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
-@RestControllerAdvice
+@ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
-    // Handle NotFoundException
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ErrorObject> handleNotFoundException(NotFoundException ex, WebRequest request) {
-        ErrorObject errorObject = new ErrorObject();
-        errorObject.setStatusCode(HttpStatus.NOT_FOUND.value());
-        errorObject.setMessage(ex.getMessage());
-        errorObject.setTimestamp(new Date());
-        return new ResponseEntity<>(errorObject, HttpStatus.NOT_FOUND);
-    }
+    @ExceptionHandler(InvalidInputException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidInputException(InvalidInputException ex) {
+        log.error("Invalid input exception: {}", ex.getMessage());
 
-    @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<ErrorObject> handleBadCredentialsException(BadCredentialsException ex) {
-        ErrorObject errorObject = new ErrorObject();
-        errorObject.setStatusCode(HttpStatus.UNAUTHORIZED.value());
-        errorObject.setMessage("Invalid username or password");
-        errorObject.setTimestamp(new Date());
-        return new ResponseEntity<>(errorObject, HttpStatus.UNAUTHORIZED);
-    }
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage())
+                .build();
 
-    @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex, WebRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse(
-                "error",
-                ex.getMessage(),
-                HttpStatus.FORBIDDEN.value()
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
-
-    // Handle BadRequestException
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ErrorObject> handleBadRequestException(BadRequestException ex, WebRequest request) {
-        ErrorObject errorObject = new ErrorObject();
-        errorObject.setStatusCode(HttpStatus.BAD_REQUEST.value());
-        errorObject.setMessage(ex.getMessage());
-        errorObject.setTimestamp(new Date());
-        return new ResponseEntity<>(errorObject, HttpStatus.BAD_REQUEST);
-    }
-
-    // Generic Exception Handler
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorObject> handleGlobalException(Exception ex, WebRequest request) {
-        ErrorObject errorObject = new ErrorObject();
-        errorObject.setStatusCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        errorObject.setMessage("An unexpected error occurred: " + ex.getMessage());
-        errorObject.setTimestamp(new Date());
-        return new ResponseEntity<>(errorObject, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<String> handleInvalidArgumentException(IllegalArgumentException ex) {
-        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
-    }
-
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorRequestObject> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        ErrorRequestObject errorObject = new ErrorRequestObject();
-        errorObject.setStatusCode(HttpStatus.BAD_REQUEST.value());
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
 
-        // Collect all field errors as a list of maps
-        List<Map<String, String>> errorMessages = new ArrayList<>();
-        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-            Map<String, String> errorMap = new HashMap<>();
-            errorMap.put("field", error.getField());
-            errorMap.put("message", error.getDefaultMessage());
-            errorMessages.add(errorMap);
-        }
+        String errorMessage = errors.entrySet().stream()
+                .map(entry -> entry.getKey() + ": " + entry.getValue())
+                .collect(Collectors.joining(", "));
 
-        // Set the error messages as a list of maps
-        errorObject.setMessage(errorMessages);
-        errorObject.setTimestamp(new Date());
+        log.error("Validation errors: {}", errorMessage);
 
-        return new ResponseEntity<>(errorObject, HttpStatus.BAD_REQUEST);
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("Validation error: " + errorMessage)
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
     }
 
-    // Handle duplicate name exception
-    @ExceptionHandler(DuplicateNameException.class)
-    public ResponseEntity<ErrorResponse> handleDuplicateNameException(DuplicateNameException ex, WebRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse(
-                "error",              // status
-                ex.getMessage(),            // message (e.g., "Name already exists")
-                HttpStatus.CONFLICT.value() // status code (409)
-        );
-        return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex) {
+        String errorMessage = ex.getConstraintViolations().stream()
+                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                .collect(Collectors.joining(", "));
+
+        log.error("Constraint violation: {}", errorMessage);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("Validation error: " + errorMessage)
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleAllExceptions(Exception ex) {
+        log.error("Unhandled exception", ex);
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message("An unexpected error occurred: " + ex.getMessage())
+                .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
