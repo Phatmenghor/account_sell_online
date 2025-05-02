@@ -1,5 +1,6 @@
 package com.account_sell.feature.account.service.impl;
 
+import com.account_sell.enumation.AccountType;
 import com.account_sell.enumation.FilterType;
 import com.account_sell.exceptions.error.InvalidInputException;
 import com.account_sell.feature.account.dto.request.GenerateAccountRequest;
@@ -23,14 +24,14 @@ public class AccountNumberGeneratorServiceImpl implements AccountNumberGenerator
 
     @Override
     public GenerateAccountResponse generateSpecialAccountNumbers(GenerateAccountRequest request, int limit) {
-        log.info("Generating special account numbers with pattern: {}, price range: {} - {}, filter: {}, limit: {}",
+        log.info("Generating special account numbers with pattern: {}, price range: {} - {}, filter: {}, limit: {}, type: {}",
                 request.getUserInputMinunum4DigitalTo9(), request.getMinPrice(), request.getMaxPrice(),
-                request.getFilter(), limit);
+                request.getFilter(), limit, request.getAccountType());
 
         // Validate request
         validateRequest(request);
 
-        // Apply default limit if not specified or larger than 100
+        // Apply default limit if not specified or larger than max
         if (limit <= 0 || limit > 100000) {
             limit = 10;
             log.debug("Applying default limit of 10");
@@ -46,9 +47,15 @@ public class AccountNumberGeneratorServiceImpl implements AccountNumberGenerator
             log.debug("No filter specified, defaulting to CONTAIN");
         }
 
+        AccountType accountType = request.getAccountType();
+        if (accountType == null) {
+            accountType = AccountType.NORMAL;
+            log.debug("No account type specified, defaulting to NORMAL");
+        }
+
         // Generate account numbers
         List<Map.Entry<String, Double>> generatedAccounts = AccountNumberUtil.generateAccountNumbers(
-                inputPattern, filterType.name(), limit, minPrice, maxPrice);
+                inputPattern, filterType.name(), limit, minPrice, maxPrice, accountType);
 
         log.info("Generated {} account numbers matching criteria", generatedAccounts.size());
 

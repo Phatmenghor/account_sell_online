@@ -1,5 +1,6 @@
 package com.account_sell.feature.account.dto.request;
 
+import com.account_sell.enumation.AccountType;
 import com.account_sell.enumation.FilterType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Size;
+
 
 @Data
 @NoArgsConstructor
@@ -25,4 +27,6 @@ public class GenerateAccountRequest {
     private double maxPrice;
 
     private FilterType filter = FilterType.CONTAIN;
+
+    private AccountType accountType = AccountType.NORMAL;
 }
