@@ -37,6 +37,13 @@ jwt:
   expiration-min: 144000000000  # 24 hours
   issuer: account-sell-api
 
+bank:
+  soap:
+    url: http://192.168.127.31:7003/CPB.MB.TWS/services
+    username: APPLOS
+    password: WWss123!@#
+    enabled: true  # Set to false in test environments
+
 # Default users configuration
 app:
   # Whether to create default users on startup

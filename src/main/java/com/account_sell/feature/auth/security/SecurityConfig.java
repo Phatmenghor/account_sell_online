@@ -43,6 +43,7 @@ public class SecurityConfig {
                 // Public endpoints
                 .antMatchers("/api/v1/admin/auth/**").permitAll()
                 .antMatchers("/api/v1/special-accounts/**").permitAll()
+                .antMatchers("/api/v1/orders/**").permitAll()
                 .antMatchers("/api/images/**").permitAll()
                 .antMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
