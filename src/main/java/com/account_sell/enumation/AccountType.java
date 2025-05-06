@@ -1,5 +1,8 @@
 package com.account_sell.enumation;
 
+import lombok.Getter;
+
+@Getter
 public enum AccountType {
     CASA("Casa"),
     LOAN("Loan"),
@@ -13,11 +16,7 @@ public enum AccountType {
     AccountType(String displayName) {
         this.displayName = displayName;
     }
-    
-    public String getDisplayName() {
-        return displayName;
-    }
-    
+
     public String getPrefix() {
         switch (this) {
             case CASA: return "000";
