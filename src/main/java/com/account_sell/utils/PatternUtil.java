@@ -17,19 +17,22 @@ public class PatternUtil {
      * @return price based on the pattern
      */
     public double calculatePrice(String accountNumber) {
-        // Check patterns in order of price (highest to lowest)
+        // Check for "5 same digits plus 168" pattern first to give it priority
+        if (containsSame5DigitsPlus168(accountNumber)) {
+            return PriceRange.PREMIUM_5000.getPrice();
+        }
 
+        // Check patterns in order of price (highest to lowest)
         // $10,000 patterns
         if (containsSame8or9Digits(accountNumber) ||
-                containsSame6DigitsPlus168(accountNumber) ||
                 contains3SetsOfSame3DigitsInOrder(accountNumber) ||
                 containsSame5DigitsPlus2SetsOf2Digits(accountNumber) ||
                 containsSame7DigitsGreaterOrEqualTo8(accountNumber)) {
             return PriceRange.PREMIUM_10000.getPrice();
         }
 
-        // $5,000 patterns
-        if (containsSame5DigitsPlus168(accountNumber) ||
+        // $5,000 patterns (excluding the one we already checked)
+        if (containsSame6DigitsPlus168(accountNumber) ||
                 contains4PairsInOrder(accountNumber) ||
                 containsSame6DigitsPlus3SameDigits(accountNumber) ||
                 containsSame7DigitsLessThan8(accountNumber) ||
@@ -160,17 +163,81 @@ public class PatternUtil {
 
     // Pattern to check if contains the same 4 digit numbers + 168
     public boolean containsSame4DigitsPlus168(String accountNumber) {
-        return contains168(accountNumber) && containsConsecutiveSameDigits(accountNumber, 4);
+        if (!contains168(accountNumber)) {
+            return false;
+        }
+
+        // Find position of "168"
+        int pos168 = accountNumber.indexOf("168");
+
+        // Check for 4 consecutive same digits excluding the "168" area
+        for (int i = 0; i <= accountNumber.length() - 4; i++) {
+            // Skip checking if this would overlap with "168"
+            if ((i < pos168 + 3 && i + 4 > pos168) || (i >= pos168 && i < pos168 + 3)) {
+                continue;
+            }
+
+            String substr = accountNumber.substring(i, i + 4);
+            if (allDigitsSame(substr)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Pattern to check if contains the same 5 digits numbers + 168
     public boolean containsSame5DigitsPlus168(String accountNumber) {
-        return contains168(accountNumber) && containsConsecutiveSameDigits(accountNumber, 5);
+        if (!contains168(accountNumber)) {
+            return false;
+        }
+
+        // Find position of "168"
+        int pos168 = accountNumber.indexOf("168");
+
+        // Check for 5 consecutive same digits
+        boolean has5SameDigits = false;
+
+        for (int i = 0; i <= accountNumber.length() - 5; i++) {
+            // Skip checking if this position would overlap with "168"
+            if ((i < pos168 + 3 && i + 5 > pos168) || (i >= pos168 && i < pos168 + 3)) {
+                continue;
+            }
+
+            String substr = accountNumber.substring(i, i + 5);
+            if (allDigitsSame(substr)) {
+                has5SameDigits = true;
+                break;
+            }
+        }
+
+        // Both conditions must be true: contains "168" AND has 5 consecutive same digits
+        return has5SameDigits;
     }
 
     // Pattern to check if contains the same 6 digits numbers + 168
     public boolean containsSame6DigitsPlus168(String accountNumber) {
-        return contains168(accountNumber) && containsConsecutiveSameDigits(accountNumber, 6);
+        if (!contains168(accountNumber)) {
+            return false;
+        }
+
+        // Find position of "168"
+        int pos168 = accountNumber.indexOf("168");
+
+        // Check for 6 consecutive same digits excluding the "168" area
+        for (int i = 0; i <= accountNumber.length() - 6; i++) {
+            // Skip checking if this would overlap with "168" pattern
+            if ((i < pos168 + 3 && i + 6 > pos168) || (i >= pos168 && i < pos168 + 3)) {
+                continue;
+            }
+
+            String substr = accountNumber.substring(i, i + 6);
+            if (allDigitsSame(substr)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Pattern to check if a number contains 6 numbers in order
@@ -206,9 +273,10 @@ public class PatternUtil {
 
     // Pattern to check if a number contains the same 4 digits in the middle
     public boolean containsSame4DigitsInMiddle(String accountNumber) {
-        if (accountNumber.length() < 4) return false;
+        if (accountNumber.length() < 6) return false; // Need at least one digit on each side
 
-        for (int i = 1; i <= accountNumber.length() - 4; i++) {
+        // Only check middle positions (not at start or end)
+        for (int i = 1; i <= accountNumber.length() - 5; i++) {
             String substr = accountNumber.substring(i, i + 4);
             if (allDigitsSame(substr)) {
                 return true;
@@ -263,9 +331,10 @@ public class PatternUtil {
 
     // Pattern to check if a number contains the same 5 digits in the middle
     public boolean containsSame5DigitsInMiddle(String accountNumber) {
-        if (accountNumber.length() < 5) return false;
+        if (accountNumber.length() < 7) return false; // Need at least one digit on each side
 
-        for (int i = 1; i <= accountNumber.length() - 5; i++) {
+        // Only check middle positions (not at start or end)
+        for (int i = 1; i <= accountNumber.length() - 6; i++) {
             String substr = accountNumber.substring(i, i + 5);
             if (allDigitsSame(substr)) {
                 return true;
@@ -289,12 +358,14 @@ public class PatternUtil {
         // Check for 5 same digits
         boolean has5SameDigits = false;
         char digit5 = ' ';
+        int position5 = -1;
 
         for (int i = 0; i <= accountNumber.length() - 5; i++) {
             String substr = accountNumber.substring(i, i + 5);
             if (allDigitsSame(substr)) {
                 has5SameDigits = true;
                 digit5 = substr.charAt(0);
+                position5 = i;
                 break;
             }
         }
@@ -303,6 +374,10 @@ public class PatternUtil {
 
         // Check for 3 same digits of a different number
         for (int i = 0; i <= accountNumber.length() - 3; i++) {
+            // Skip overlapping region
+            if (i >= position5 && i < position5 + 5) continue;
+            if (i + 3 > position5 && i < position5 + 5) continue;
+
             String substr = accountNumber.substring(i, i + 3);
             if (allDigitsSame(substr) && substr.charAt(0) != digit5) {
                 return true;
@@ -316,21 +391,34 @@ public class PatternUtil {
     public boolean containsSame5DigitsPlus2SetsOf2Digits(String accountNumber) {
         // First check for 5 same digits
         boolean has5SameDigits = false;
+        int position5 = -1;
 
         for (int i = 0; i <= accountNumber.length() - 5; i++) {
             String substr = accountNumber.substring(i, i + 5);
             if (allDigitsSame(substr)) {
                 has5SameDigits = true;
+                position5 = i;
                 break;
             }
         }
 
         if (!has5SameDigits) return false;
 
-        // Check for 2 pairs
-        Pattern pattern = Pattern.compile("(\\d)\\1.*?(\\d)\\2");
-        Matcher matcher = pattern.matcher(accountNumber);
-        return matcher.find();
+        // Find non-overlapping pairs
+        int pairCount = 0;
+
+        for (int i = 0; i < accountNumber.length() - 1; i++) {
+            // Skip the region of 5 same digits
+            if (i >= position5 && i < position5 + 5) continue;
+            if (i + 1 >= position5 && i + 1 < position5 + 5) continue;
+
+            if (accountNumber.charAt(i) == accountNumber.charAt(i + 1)) {
+                pairCount++;
+                i++; // Skip next digit as it's part of this pair
+            }
+        }
+
+        return pairCount >= 2;
     }
 
     // Pattern to check if a number contains the same 5 digits + the same 4 digit number
@@ -338,12 +426,14 @@ public class PatternUtil {
         // Check for 5 same digits
         boolean has5SameDigits = false;
         char digit5 = ' ';
+        int position5 = -1;
 
         for (int i = 0; i <= accountNumber.length() - 5; i++) {
             String substr = accountNumber.substring(i, i + 5);
             if (allDigitsSame(substr)) {
                 has5SameDigits = true;
                 digit5 = substr.charAt(0);
+                position5 = i;
                 break;
             }
         }
@@ -352,6 +442,10 @@ public class PatternUtil {
 
         // Check for 4 same digits of a different number
         for (int i = 0; i <= accountNumber.length() - 4; i++) {
+            // Skip overlapping region
+            if (i >= position5 && i < position5 + 5) continue;
+            if (i + 4 > position5 && i < position5 + 5) continue;
+
             String substr = accountNumber.substring(i, i + 4);
             if (allDigitsSame(substr) && substr.charAt(0) != digit5) {
                 return true;
@@ -382,12 +476,14 @@ public class PatternUtil {
         // Check for 6 same digits
         boolean has6SameDigits = false;
         char digit6 = ' ';
+        int position6 = -1;
 
         for (int i = 0; i <= accountNumber.length() - 6; i++) {
             String substr = accountNumber.substring(i, i + 6);
             if (allDigitsSame(substr)) {
                 has6SameDigits = true;
                 digit6 = substr.charAt(0);
+                position6 = i;
                 break;
             }
         }
@@ -396,6 +492,10 @@ public class PatternUtil {
 
         // Check for 3 same digits of a different number
         for (int i = 0; i <= accountNumber.length() - 3; i++) {
+            // Skip overlapping region
+            if (i >= position6 && i < position6 + 6) continue;
+            if (i + 3 > position6 && i < position6 + 6) continue;
+
             String substr = accountNumber.substring(i, i + 3);
             if (allDigitsSame(substr) && substr.charAt(0) != digit6) {
                 return true;
