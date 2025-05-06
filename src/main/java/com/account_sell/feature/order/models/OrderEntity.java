@@ -54,7 +54,7 @@ public class OrderEntity extends BaseEntity {
     public void prePersist() {
         super.prePersist();
         if (status == null) {
-            status = OrderStatus.PENDING;
+            status = OrderStatus.BOOKED;
         }
     }
 }
